@@ -38,6 +38,7 @@ For IL2CPP it's not possible to obtain function pointer with `MethodInfo.MethodH
 3. Struct-returning calls might have some issues, especially when structure is larger than IntPtr.Size.
 
 ## TODO:
+0. `ref TThis, ref T1, ref T2, etc` to have an ability to pass structures by reference. 
 1. Make automatic cross-runtime function pointer resolving (kinda easy, actually). I already have working code in another library.
 2. Make some function pointer wrappers and casting, so MethodInfo could be directly called via extension methods? Seems like a good solution.
 3. Make untyped return with byte[]/Span<> for special cases. Not sure yet would it be usable or not.
