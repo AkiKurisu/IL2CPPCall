@@ -43,8 +43,26 @@ namespace ConsoleApplication2
             typeof(string),
             typeof(object),
             typeof(IntPtr),
+            typeof(float),
+            typeof(double),
         };
 
+        public static OpCode[] returnTypeOpcodes = new OpCode[]
+        {
+            OpCodes.Conv_U1,
+            OpCodes.Conv_U2,
+            OpCodes.Conv_I2,
+            OpCodes.Conv_U4,
+            OpCodes.Conv_I4,
+            OpCodes.Conv_I8,
+            OpCodes.Conv_U8,
+            OpCodes.Conv_U,
+            OpCodes.Conv_U,
+            OpCodes.Conv_I,
+            OpCodes.Conv_R4,
+            OpCodes.Conv_R8,
+        };
+        
         public static ModStruct AddModType(ModDefinition definition)
         {
             var type = module.DefineType($"Func{definition.name}",
@@ -174,7 +192,7 @@ namespace ConsoleApplication2
         {
             var strName = GetMethodNameForType(returnType);
             var newMethod = type.DefineMethod(strName, MethodAttributes.Public);
-
+            
             List<string> paramNames = new List<string>();
 
             //paramNames.Add("TReturn");
@@ -230,7 +248,7 @@ namespace ConsoleApplication2
             int numArgs)
         {
             var newMethod = type.DefineMethod($"Ref", MethodAttributes.Public);
-
+            
             List<string> paramNames = new List<string>();
 
             paramNames.Add("TReturn");
@@ -535,6 +553,12 @@ namespace ConsoleApplication2
 
             if (returnType == typeof(object))
                 return "Object";
+
+            if (returnType == typeof(float))
+                return "Float";
+            
+            if (returnType == typeof(double))
+                return "Double";
 
             throw new KeyNotFoundException($"Can't find method name for type {returnType}");
         }
