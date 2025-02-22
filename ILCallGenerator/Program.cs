@@ -75,7 +75,7 @@ namespace ConsoleApplication2
             else
                 funcPtrField = type.DefineField("methodPtr", typeof(IntPtr), FieldAttributes.Public);
 
-            const int maxNumArgs = 4;
+            const int maxNumArgs = 6;
             for (int i = 0; i <= maxNumArgs; i++)
             {
                 var method = AddMethod(funcPtrField, definition, type, null, i);
