@@ -3,9 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
-using System.Runtime.InteropServices;
 
-namespace ConsoleApplication2
+namespace ILCallGenerator
 {
     internal class Program
     {
@@ -23,31 +22,37 @@ namespace ConsoleApplication2
         private static TypeBuilder EmitHelper(EmitHelperDefinition definition)
         {
             /* Emit a static helper class */
-            var type = _module.DefineType($"Func{definition.Name}",
+            var typeBuilder = _module.DefineType($"Func{definition.Name}",
                 TypeAttributes.Public 
                 | TypeAttributes.Abstract 
                 | TypeAttributes.Sealed);
 
+            if (definition.HasThis)
+            {
+                BuildManagedHelper(typeBuilder);
+            }
+            
+            return typeBuilder;
+        }
+        
+        private static void BuildManagedHelper(TypeBuilder typeBuilder)
+        {
             const int maxNumArgs = 6;
             for (int i = 0; i <= maxNumArgs; i++)
             {
-                AddMethod(definition, type, null, i);
+                EmitManagedCalilMethod(typeBuilder, null, i);
             }
 
             for (int i = 0; i <= maxNumArgs; i++)
             {
-                AddMethod(definition, type, typeof(void), i);
+                EmitManagedCalilMethod(typeBuilder, typeof(void), i);
             }
-            
-            return type;
         }
         
-       private static MethodBuilder AddMethod(EmitHelperDefinition definition, TypeBuilder type,
-            Type returnType, int numArgs)
+       private static void EmitManagedCalilMethod(TypeBuilder type, Type returnType, int numArgs)
         {
             string methodName;
             bool hasReturn = returnType != typeof(void);
-            bool hasGenericReturn = hasReturn && returnType == null;
 
             if (returnType == null)
                 methodName = "Generic";
@@ -58,13 +63,12 @@ namespace ConsoleApplication2
 
             List<string> paramNames = new List<string>();
 
-            if (hasGenericReturn)
+            if (hasReturn)
                 paramNames.Add("TReturn");
 
             var argsStart = paramNames.Count;
-
-            if (definition.HasThis)
-                paramNames.Add("TThis");
+            
+            paramNames.Add("TThis");
 
             for (int arg = 0; arg < numArgs; arg++)
                 paramNames.Add($"T{arg + 1}");
@@ -79,28 +83,20 @@ namespace ConsoleApplication2
 
             if (hasReturn)
             {
-                if (hasGenericReturn)
-                {
-                    returnTypeOfCall = genericParameters[0];
-                    returnTypeOfFunc = genericParameters[0];
-                }
-                else
-                {
-                    returnTypeOfCall = returnType;
-                    returnTypeOfFunc = returnType;
-                }
+                returnTypeOfCall = genericParameters[0];
+                returnTypeOfFunc = genericParameters[0];
             }
 
             var genParamTypes = genericParameters.Select(x => (Type)x).ToArray();
-            if (hasGenericReturn)
+            if (hasReturn)
+            {
                 genParamTypes[0] = returnTypeOfFunc;
+            }
 
             var allArguments = genParamTypes.Length > 0 ? genParamTypes.Skip(argsStart).ToArray() : Type.EmptyTypes;
             allArguments = allArguments
-                /* Method Ptr */
-                .Append(typeof(IntPtr))
-                /* Runtime method handle */
-                .Append(typeof(void*)).ToArray();
+                .Append(typeof(void*))
+                .ToArray();
 
             callMethod.SetReturnType(returnTypeOfFunc);
             callMethod.SetParameters(allArguments);
@@ -108,27 +104,19 @@ namespace ConsoleApplication2
 
             for (int i = 0; i < allArguments.Length; i++)
             {
-                var id = i + 1 - (definition.HasThis ? 1 : 0);
-                if (i == 0 && definition.HasThis)
+                if (i == 0)
                 {
-                    callMethod.DefineParameter(1, ParameterAttributes.None, "_this");
+                    callMethod.DefineParameter(1, ParameterAttributes.None, "thisType");
                 }
                 else
                 {
-                    if (i == allArguments.Length - 2)
+                    if (i == allArguments.Length - 1)
                     {
                         callMethod.DefineParameter(i + 1, ParameterAttributes.None, "methodPtr");
                     }
-                    else if (i == allArguments.Length - 1)
-                    {
-                        var p = callMethod.DefineParameter(i + 1,
-                            ParameterAttributes.None | ParameterAttributes.Optional | ParameterAttributes.HasDefault,
-                            "runtimeHandleIL2CPP");
-                        p.SetConstant(null);
-                    }
                     else
                     {
-                        callMethod.DefineParameter(i + 1, ParameterAttributes.None, $"arg{id}");
+                        callMethod.DefineParameter(i + 1, ParameterAttributes.None, $"arg{i}");
                     }
                 }
             }
@@ -136,22 +124,19 @@ namespace ConsoleApplication2
             var generator = callMethod.GetILGenerator();
 
             // Load all arguments
-            for (int argId = 0; argId < allArguments.Length - 2; argId++)
+            for (int argId = 0; argId < allArguments.Length; argId++)
             {
                 Ldarg(argId);
             }
-            
-            // Load MethodHandle
-            Ldarg(allArguments.Length - 1);
-            // Load MethodPtr
-            Ldarg(allArguments.Length - 2);
-            
+
             var calliArguments = allArguments.ToList();
-            calliArguments.RemoveAt(calliArguments.Count - 2);
-            generator.EmitCalli(OpCodes.Calli, CallingConvention.Cdecl, returnTypeOfCall, calliArguments.ToArray());
+            calliArguments.RemoveAt(calliArguments.Count - 1);
+            /* Manage instance function call */
+            calliArguments.RemoveAt(0);
+            generator.EmitCalli(OpCodes.Calli, CallingConventions.Standard | CallingConventions.HasThis, returnTypeOfCall, calliArguments.ToArray(), null);
             generator.Emit(OpCodes.Ret);
-           
-            return callMethod;
+
+            return;
 
             void Ldarg(int argId)
             {
@@ -181,15 +166,15 @@ namespace ConsoleApplication2
                 Name = "IL2CPP"
             });
 
-            var il2CppStatic = EmitHelper(new EmitHelperDefinition
-            {
-                HasThis = false,
-                Name = "IL2CPPStatic"
-            });
+            // var il2CppStatic = EmitHelper(new EmitHelperDefinition
+            // {
+            //     HasThis = false,
+            //     Name = "IL2CPPStatic"
+            // });
 
             var allTypes = new[]
             {
-                il2Cpp, il2CppStatic
+                il2Cpp
             };
             
             foreach (var typeBuilder in allTypes)
