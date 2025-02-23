@@ -1,6 +1,6 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ILCallGenerator", "ILCallGenerator\ILCallGenerator.csproj", "{A13B941F-01D5-44E4-8D66-DBD1FE4D8425}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "IL2CPPCallGenerator", "IL2CPPCallGenerator\IL2CPPCallGenerator.csproj", "{A13B941F-01D5-44E4-8D66-DBD1FE4D8425}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

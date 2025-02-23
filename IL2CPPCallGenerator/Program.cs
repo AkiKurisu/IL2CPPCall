@@ -4,7 +4,7 @@ using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
 
-namespace ILCallGenerator
+namespace IL2CPPCallGenerator
 {
     internal class Program
     {
@@ -155,9 +155,9 @@ namespace ILCallGenerator
 
         public static void Main(string[] args)
         {
-            var an = new AssemblyName("ILCall");
+            var an = new AssemblyName("IL2CPPCall");
             _dynamicAssembly = AppDomain.CurrentDomain.DefineDynamicAssembly(an, AssemblyBuilderAccess.RunAndSave);
-            _module = _dynamicAssembly.DefineDynamicModule("ILCall.dll", true);
+            _module = _dynamicAssembly.DefineDynamicModule("IL2CPPCall.dll", true);
             an.Version = new Version(1, 0, 0);
             
             var il2Cpp = EmitHelper(new EmitHelperDefinition
@@ -180,7 +180,7 @@ namespace ILCallGenerator
             foreach (var typeBuilder in allTypes)
                 typeBuilder.CreateType();
 
-            _dynamicAssembly.Save("ILCall.dll");
+            _dynamicAssembly.Save("IL2CPPCall.dll");
         }
     }
 }
